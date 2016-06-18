@@ -1,16 +1,10 @@
-FROM java:8
+FROM java:8-jre-alpine
 
 ENV MC_PATH /home/minecraft/server
 
-# Add minecraft user
-RUN set -x && useradd minecraft -m -s /bin/bash
+RUN set -x && adduser -D minecraft
 
-
-# RUN set -x && apt-get -q update && \
-#   DEBIAN_FRONTEND=noninteractive apt-get -q -y --no-install-recommends install \
-#   wget && \
-#   apt-get clean && rm -rf /var/lib/apt/lists/*
-
+RUN set -x && apk add --no-cache wget bash
 
 USER minecraft
 
