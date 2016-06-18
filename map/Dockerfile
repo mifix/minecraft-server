@@ -42,4 +42,10 @@ ENV MC_VERSION ${MC_VERSION:-1.10}
 
 RUN set -x && cd /home/minecraft && \
   mkdir -p /home/minecraft/.minecraft/versions/${MC_VERSION}/ && \
-  wget -q https://s3.amazonaws.com/Minecraft.Download/versions/${MC_VERSION}/${MC_VERSION}.jar -P ~/.minecraft/versions/${MC_VERSION}/
+  wget -q https://s3.amazonaws.com/Minecraft.Download/versions/${MC_VERSION}/${MC_VERSION}.jar -P ~/.minecraft/versions/${MC_VERSION}/ && \
+  mkdir -p $MC_MAP
+
+COPY ./config.py /home/minecraft/
+
+
+ENTRYPOINT ["./overviewer.py", "--config=/home/minecraft/config.py"]
