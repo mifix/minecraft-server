@@ -12,7 +12,8 @@ RUN set -x && apk add --no-cache \
   virtualenv /env && \
   /env/bin/pip3 --no-cache-dir install setuptools_scm llfuse && \
   /env/bin/pip3 --no-cache-dir install borgbackup && \
-  apk del build-dependencies
+  apk del build-dependencies && \
+  rm -rf /var/cache/apk/*
 
 
 RUN set -x && adduser -D minecraft
