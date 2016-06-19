@@ -14,7 +14,7 @@ if [[ $# -gt 0 && $1 == "java" ]]; then
     mkfifo $pipe
   fi
 
-  exec "$@" <> $pipe
+  exec java $JVM_OPTS -jar minecraft_server.jar nogui <> $pipe
 
 fi
 

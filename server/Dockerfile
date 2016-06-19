@@ -24,8 +24,9 @@ COPY docker-entrypoint.sh $MC_PATH/../
 
 ENTRYPOINT ["../docker-entrypoint.sh"]
 
-CMD ["java", "-Xmx1024M", "-Xms1024M", "-jar", "minecraft_server.jar", "nogui"]
+CMD ["java", "-jar", "minecraft_server.jar", "nogui"]
 
+ENV JVM_OPTS -Xmx1024M -Xms1024M
 
 # Download Minecraft Server
 ARG MC_VERSION
