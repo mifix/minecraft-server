@@ -23,15 +23,15 @@ SCRIPTPATH=$( cd "$(dirname $0)" ; pwd -P )
 ############################# Library ########################################## {{{
 
 debug() {
-  echo -e "\e[90m[DEBUG] ${*}\e[0m"
+  echo -e "\033[90m[DEBUG] ${*}\033[0m"
 }
 
 print() {
-  echo -e "\e[1;36m$*\e[0m"
+  echo -e "\033[1;36m$*\033[0m"
 }
 
 error() {
-  echo -e "\e[91m${*}\e[0m"
+  echo -e "\033[91m${*}\033[0m"
   exit 1
 }
 
