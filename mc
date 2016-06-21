@@ -105,8 +105,8 @@ Image_remove() {
 # $4 ... array of volume mappings (eg. "foo_volume:/data")
 Container() {
   _cnt_name="$CNT_PREFIX$1"
-  declare -a -g  _cnt_ports=()
-  declare -a -g  _cnt_volumes=()
+  _cnt_ports=()
+  _cnt_volumes=()
 
   _cnt_exists=$( docker_exec ps -a --format "{{.Names}}" | grep -c "$_cnt_name" || true )
   _cnt_running=$( docker_exec ps --format "{{.Names}}" | grep -c "$_cnt_name" || true )
@@ -116,11 +116,11 @@ Container() {
   fi
 
   if [ $# -gt 2 ]; then
-    declare -a -g _cnt_ports=($3)
+    _cnt_ports=($3)
   fi
 
   if [ $# -gt 3 ]; then
-    declare -a -g _cnt_volumes=($4)
+    _cnt_volumes=($4)
   fi
 }
 
