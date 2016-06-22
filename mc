@@ -11,6 +11,7 @@ set -euo pipefail
 # mc generate_map $name
 
 IMAGE_PREFIX="wthkiste"
+IMAGE_NAME="minecraft-server"
 VOLUME_PREFIX="mc_store_"
 CNT_PREFIX="minecraft_"
 
@@ -248,7 +249,7 @@ start() {
   Volume_create
 
 
-  Image "minecraft" "${MC_VERSION:-latest}"
+  Image $IMAGE_NAME "${MC_VERSION:-latest}"
   Image_pull
 
   declare -a mc_ports=("${MC_PORT:-25565}:25565")
@@ -282,7 +283,7 @@ status() {
   local WORLD_NAME="$1"
 
   Volume "$WORLD_NAME"
-  Image "minecraft" "${MC_VERSION:-latest}"
+  Image $IMAGE_NAME "${MC_VERSION:-latest}"
   Container "$WORLD_NAME" "$(Image_name)"
 
   echo
@@ -313,6 +314,39 @@ status() {
   echo -e "\n"
 }
 
+upgrade() {
+  if [ $# -ne 1 ]; then
+    echo -e "\nUsage:\n$0 log [world_name] \n"
+    error "World name is missing."
+  fi
+
+  local WORLD_NAME="$1"
+
+  stop "$WORLD_NAME"
+
+  Container "$WORLD_NAME"
+  Container_remove
+
+  start "$WORLD_NAME"
+}
+
+destroy() {
+  if [ $# -ne 1 ]; then
+    echo -e "\nUsage:\n$0 log [world_name] \n"
+    error "World name is missing."
+  fi
+
+  local WORLD_NAME="$1"
+
+  stop "$WORLD_NAME"
+
+  Container "$WORLD_NAME"
+  Container_remove
+
+  Volume "$WORLD_NAME"
+  Volume_remove "$WORLD_NAME"
+}
+
 log() {
   if [ $# -ne 1 ]; then
       echo -e "\nUsage:\n$0 log [world_name] \n"
@@ -329,7 +363,7 @@ log() {
 
 
 usage() {
-  echo -e "\nUsage:\n$0 [start|stop|status|cmd|generate_map] [world_name] \n"
+  echo -e "\nUsage:\n$0 [start|stop|status|upgrade|cmd|generate_map] [world_name] \n"
   error "Wrong arguments."
 }
 
@@ -360,6 +394,12 @@ main() {
       ;;
     "status" )
       status "$WORLD_NAME"
+      ;;
+    "upgrade" )
+      upgrade "$WORLD_NAME"
+      ;;
+    "_destroy" )
+      destroy "$WORLD_NAME"
       ;;
     * )
       usage
