@@ -22,17 +22,41 @@ SCRIPTPATH=$( cd "$(dirname $0)" ; pwd -P )
 
 ############################# Library ########################################## {{{
 
+_Reset="\033[0m"
+_DarkGray="\033[90m"
+_BoldCyan="\033[1;36m"
+_LightRed="\033[91m"
+_BoldWhite="\033[1;37m"
+_BoldRed="\033[1;31m"
+_BoldGreen="\033[1;32m"
+_BoldYellow="\033[1;33m"
+_FancyX='\xE2\x9C\x97'
+_FancyE='\x21'
+_Checkmark='\xE2\x9C\x93'
+
 debug() {
-  echo -e "\033[90m[DEBUG] ${*}\033[0m"
+  echo -e "$_DarkGray[DEBUG] ${*}$_Reset"
 }
 
 print() {
-  echo -e "\033[1;36m$*\033[0m"
+  echo -e "$_BoldCyan$*$_Reset"
 }
 
 error() {
-  echo -e "\033[91m${*}\033[0m"
+  echo -e "$_LightRed${*}$_Reset"
   exit 1
+}
+
+you_got_it_dude() {
+  echo -e "  $_BoldGreen$_Checkmark$_Reset  $_BoldWhite$*$_Reset"
+}
+
+that_sucks() {
+  echo -e "  $_BoldRed$_FancyX$_Reset  $_BoldWhite$*$_Reset"
+}
+
+hodor() {
+  echo -e "  $_BoldYellow$_FancyE$_Reset  $_BoldWhite$*$_Reset"
 }
 
 docker_exec() {
@@ -67,6 +91,10 @@ Volume_remove() {
   docker_exec volume rm "$_volume_name"
 }
 
+Volume_exists() {
+  echo $_volume_exists
+}
+
 
 
 ############################## Images ########################################
@@ -92,6 +120,10 @@ Image_name() {
 Image_remove() {
   print " * Removing image $_image_name"
   docker_exec rmi "$_image_name"
+}
+
+Image_exists() {
+  echo $_image_exists
 }
 
 
@@ -122,6 +154,18 @@ Container() {
   if [ $# -gt 3 ]; then
     _cnt_volumes=($4)
   fi
+}
+
+Container_exists() {
+  echo $_cnt_exists
+}
+
+Container_name() {
+  echo $_cnt_name
+}
+
+Container_running() {
+  echo $_cnt_running
 }
 
 
@@ -228,6 +272,47 @@ stop() {
   Container_stop
 }
 
+
+status() {
+  if [ $# -ne 1 ]; then
+    echo -e "\nUsage:\n$0 status [world_name] \n"
+    error "World name is missing."
+  fi
+
+  local WORLD_NAME="$1"
+
+  Volume "$WORLD_NAME"
+  Image "minecraft" "${MC_VERSION:-latest}"
+  Container "$WORLD_NAME" "$(Image_name)"
+
+  echo
+  print " Status of ${WORLD_NAME}:"
+
+  if [ $(Image_exists) == 1 ]; then
+    you_got_it_dude "Image '$(Image_name)' exists"
+  else
+    that_sucks "Image '$(Image_name)' does not exists locally"
+  fi
+
+  if [ $(Volume_exists) == 1 ]; then
+    you_got_it_dude "Volume '$(Volume_name)' exists"
+  else
+    that_sucks "Volume '$(Volume_name)' is missing"
+  fi
+
+  if [ $(Container_exists) == 1 ]; then
+    if [ $(Container_running) == 1 ]; then
+      you_got_it_dude "Container '$(Container_name)' exists and is running"
+    else
+      hodor "Container '$(Container_name)' exists but is NOT running"
+    fi
+  else
+    that_sucks "Container '$(Container_name)' does not exist"
+  fi
+
+  echo -e "\n"
+}
+
 log() {
   if [ $# -ne 1 ]; then
       echo -e "\nUsage:\n$0 log [world_name] \n"
@@ -244,7 +329,7 @@ log() {
 
 
 usage() {
-  echo -e "\nUsage:\n$0 [start|stop|cmd|generate_map] [world_name] \n"
+  echo -e "\nUsage:\n$0 [start|stop|status|cmd|generate_map] [world_name] \n"
   error "Wrong arguments."
 }
 
@@ -272,6 +357,9 @@ main() {
       ;;
     "log" )
       log "$WORLD_NAME"
+      ;;
+    "status" )
+      status "$WORLD_NAME"
       ;;
     * )
       usage
