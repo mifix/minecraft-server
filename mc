@@ -3,13 +3,6 @@
 
 set -euo pipefail
 
-# mc start $name
-# mc stop $name
-#
-# mc cmd $name "time set day"
-#
-# mc generate_map $name
-
 IMAGE_PREFIX="wthkiste"
 IMAGE_NAME="minecraft-server"
 VOLUME_PREFIX="mc_store_"
@@ -140,6 +133,7 @@ Container() {
   _cnt_name="$CNT_PREFIX$1"
   _cnt_ports=()
   _cnt_volumes=()
+  _cnt_envs=()
 
   _cnt_exists=$( docker_exec ps -a --format "{{.Names}}" | grep -c "${_cnt_name}\$" || true )
   _cnt_running=$( docker_exec ps --format "{{.Names}}" | grep -c "${_cnt_name}\$" || true )
@@ -203,6 +197,22 @@ Container_volumes() {
   fi
 }
 
+Container_environment() {
+  # Set env vars
+  if [ $# -eq 1 ]; then
+    _cnt_envs=($1)
+  else
+    local envs=""
+    if [ "${#_cnt_envs[@]}" -gt 0 ]; then
+      for e in "${_cnt_envs[@]}"; do
+        envs="${envs} -e $e"
+      done
+    fi
+
+    echo "$envs"
+  fi
+}
+
 
 # shellcheck disable=SC2120
 Container_run() {
@@ -216,12 +226,12 @@ Container_run() {
       print " * Starting container $_cnt_name for the first time"
       # (we actually want to split ports and volume args)
       # shellcheck disable=SC2046 disable=2086
-      docker_exec run -d --name "$_cnt_name" $(Container_ports) $(Container_volumes) "$_cnt_image"
+      docker_exec run -d --name "$_cnt_name" $(Container_ports) $(Container_volumes) $(Container_environment) "$_cnt_image"
     else
       print " * Running command '$cmd' in container $_cnt_name"
       # (we actually want to split ports and volume args)
       # shellcheck disable=SC2046 disable=2086
-      docker_exec run --rm -it --name "$_cnt_name" $(Container_ports) $(Container_volumes) "$_cnt_image" $cmd
+      docker_exec run --rm -it --name "$_cnt_name" $(Container_ports) $(Container_volumes) $(Container_environment) "$_cnt_image" $cmd
     fi
   fi
 }
@@ -256,7 +266,10 @@ Container_log() {
 
 ################################################################################### }}}
 
-start() {
+
+
+
+start() { # {{{
   if [ $# -ne 1 ]; then
     	echo -e "\nUsage:\n$0 start [world_name] \n"
       error "World name is missing."
@@ -278,10 +291,9 @@ start() {
 
   Container "$WORLD_NAME" "$(Image_name)" "${mc_ports[*]}" "${mc_volumes[*]}"
   Container_run
-}
+} # }}}
 
-
-stop() {
+stop() { # {{{
   if [ $# -ne 1 ]; then
       echo -e "\nUsage:\n$0 stop [world_name] \n"
       error "World name is missing."
@@ -291,10 +303,9 @@ stop() {
 
   Container "$WORLD_NAME"
   Container_stop
-}
+} # }}}
 
-
-status() {
+status() {  # {{{
   if [ $# -ne 1 ]; then
     echo -e "\nUsage:\n$0 status [world_name] \n"
     error "World name is missing."
@@ -307,7 +318,7 @@ status() {
   Container "$WORLD_NAME" "$(Image_name)"
 
   echo
-  print " Status of ${WORLD_NAME}:"
+  print " Server status for world '${WORLD_NAME}':"
 
   if [ $(Image_exists) == 1 ]; then
     you_got_it_dude "Image '$(Image_name)' exists"
@@ -331,10 +342,84 @@ status() {
     that_sucks "Container '$(Container_name)' does not exist"
   fi
 
-  echo -e "\n"
-}
+  echo
+  print " Command runner for world '${WORLD_NAME}':"
+  Image "minecraft-cmd" "latest"
+  Container "${WORLD_NAME}_cmd" "$(Image_name)"
 
-upgrade() {
+  if [ $(Image_exists) == 1 ]; then
+    you_got_it_dude "Image '$(Image_name)' exists"
+  else
+    that_sucks "Image '$(Image_name)' does not exists locally"
+  fi
+
+  if [ $(Container_exists) == 1 ]; then
+    if [ $(Container_running) == 1 ]; then
+      you_got_it_dude "Container '$(Container_name)' exists and is running"
+    else
+      hodor "Container '$(Container_name)' exists but is NOT running"
+    fi
+  else
+    that_sucks "Container '$(Container_name)' does not exist"
+  fi
+
+
+  echo
+  print " Map generator for world '${WORLD_NAME}':"
+  Volume "${WORLD_NAME}_map"
+  Image "minecraft-map" "latest"
+  Container "${WORLD_NAME}_map" "$(Image_name)"
+
+  if [ $(Image_exists) == 1 ]; then
+    you_got_it_dude "Image '$(Image_name)' exists"
+  else
+    that_sucks "Image '$(Image_name)' does not exists locally"
+  fi
+
+  if [ $(Volume_exists) == 1 ]; then
+    you_got_it_dude "Volume '$(Volume_name)' exists"
+  else
+    that_sucks "Volume '$(Volume_name)' is missing"
+  fi
+
+  if [ $(Container_exists) == 1 ]; then
+    if [ $(Container_running) == 1 ]; then
+      you_got_it_dude "Container '$(Container_name)' exists and is running"
+    else
+      hodor "Container '$(Container_name)' exists but is NOT running"
+    fi
+  else
+    that_sucks "Container '$(Container_name)' does not exist"
+  fi
+
+
+
+  echo
+  print " Backup for world '${WORLD_NAME}':"
+  Image "minecraft-backup" "latest"
+  Container "${WORLD_NAME}_backup" "$(Image_name)"
+
+  if [ $(Image_exists) == 1 ]; then
+    you_got_it_dude "Image '$(Image_name)' exists"
+  else
+    that_sucks "Image '$(Image_name)' does not exists locally"
+  fi
+
+  if [ $(Container_exists) == 1 ]; then
+    if [ $(Container_running) == 1 ]; then
+      you_got_it_dude "Container '$(Container_name)' exists and is running"
+    else
+      hodor "Container '$(Container_name)' exists but is NOT running"
+    fi
+  else
+    that_sucks "Container '$(Container_name)' does not exist"
+  fi
+
+
+  echo -e "\n"
+} # }}}
+
+upgrade() { # {{{
   if [ $# -ne 1 ]; then
     echo -e "\nUsage:\n$0 log [world_name] \n"
     error "World name is missing."
@@ -348,9 +433,9 @@ upgrade() {
   Container_remove
 
   start "$WORLD_NAME"
-}
+} # }}}
 
-destroy() {
+destroy() { # {{{
   if [ $# -ne 1 ]; then
     echo -e "\nUsage:\n$0 log [world_name] \n"
     error "World name is missing."
@@ -363,11 +448,20 @@ destroy() {
   Container "$WORLD_NAME"
   Container_remove
 
-  Volume "$WORLD_NAME"
-  Volume_remove "$WORLD_NAME"
-}
+  Container "${WORLD_NAME}_cmd"
+  Container_remove
 
-log() {
+  Container "${WORLD_NAME}_map"
+  Container_remove
+
+  Volume "$WORLD_NAME"
+  Volume_remove
+
+  Volume "${WORLD_NAME}_map"
+  Volume_remove
+} # }}}
+
+log() { # {{{
   if [ $# -ne 1 ]; then
       echo -e "\nUsage:\n$0 log [world_name] \n"
       error "World name is missing."
@@ -377,10 +471,9 @@ log() {
 
   Container "$WORLD_NAME"
   Container_log
-}
+} # }}}
 
-
-cmd() {
+cmd() { # {{{
   if [ $# -ne 2 ]; then
     echo -e "\nUsage:\n$0 cmd [world_name] [command] \n"
     error "World name or command is missing."
@@ -401,9 +494,43 @@ cmd() {
   Container "${WORLD_NAME}_cmd" "$(Image_name)"
   Container_volumes "${mc_volumes[*]}"
   Container_run "$command"
-}
+} # }}}
 
-generate_map() {
+backup() { # {{{
+  if [ $# -ne 2 ]; then
+    echo -e "\nUsage:\n$0 cmd [world_name]\n"
+    error "World name is missing."
+  fi
+
+  local WORLD_NAME="$1"
+  local command="$2"
+
+  Volume "$WORLD_NAME"
+  Volume_create
+
+
+  Image "minecraft-backup" "latest"
+  Image_pull
+
+  declare -a mc_volumes=("
+    $(Volume_name):/home/minecraft/server"
+    "$HOME/.ssh/backup:/home/minecraft/.ssh/id_rsa:ro" 
+    "$HOME/.ssh/known_hosts:/home/minecraft/.ssh/known_hosts:ro"
+  )
+
+  declare -a mc_environment=(
+    "BORG_PASSPHRASE=${BORG_PASSPHRASE}"
+    "MC_NAME=${WORLD_NAME}"
+    "REPOSITORY=${REPOSITORY}"
+  )
+
+  Container "${WORLD_NAME}_backup" "$(Image_name)"
+  Container_volumes "${mc_volumes[*]}"
+  Container_environment "${mc_environment[*]}"
+  Container_run "$command"
+} # }}}
+
+generate_map() {  # {{{
   if [ $# -ne 1 ]; then
     echo -e "\nUsage:\n$0 generate_map [world_name] \n"
     error "World name is missing."
@@ -432,10 +559,11 @@ generate_map() {
   Container "${WORLD_NAME}_map" "$(Image_name)"
   Container_volumes "${mc_volumes[*]}"
   Container_run "$command"
-}
+} # }}}
 
 
 
+#### MAIN {{{
 
 usage() {
   echo -e "\nUsage:\n$0 [start|stop|status|upgrade|cmd|generate_map] [world_name] \n"
@@ -480,6 +608,12 @@ main() {
     "generate_map" )
       generate_map "$WORLD_NAME"
       ;;
+    "backup" )
+      backup "$WORLD_NAME" backup
+      ;;
+    "backup_purge" )
+      backup "$WORLD_NAME" purge
+      ;;
     "_destroy" )
       destroy "$WORLD_NAME"
       ;;
@@ -488,6 +622,6 @@ main() {
       ;;
   esac
 
-}
+} # }}}
 
 main $*
