@@ -171,22 +171,36 @@ Container_running() {
 
 
 Container_ports() {
-  local ports=""
-  for port in "${_cnt_ports[@]}"; do
-    ports="${ports} -p $port"
-  done
+  # Set ports
+  if [ $# -eq 1 ]; then
+    _cnt_ports=($1)
+  else
+    local ports=""
+    if [ "${#_cnt_ports[@]}" -gt 0 ]; then
+      for port in "${_cnt_ports[@]}"; do
+        ports="${ports} -p $port"
+      done
+    fi
 
-  echo "$ports"
+    echo "$ports"
+  fi
 }
 
 
 Container_volumes() {
-  local volumes=""
-  for port in "${_cnt_volumes[@]}"; do
-    volumes="${volumes} -v $port"
-  done
+  # Set volumes
+  if [ $# -eq 1 ]; then
+    _cnt_volumes=($1)
+  else
+    local volumes=""
+    if [ "${#_cnt_volumes[@]}" -gt 0 ]; then
+      for volume in "${_cnt_volumes[@]}"; do
+        volumes="${volumes} -v $volume"
+      done
+    fi
 
-  echo "$volumes"
+    echo "$volumes"
+  fi
 }
 
 
@@ -198,11 +212,17 @@ Container_run() {
     debug "Container $_cnt_name already exists. Starting it."
     Container_start
   else
-    print " * Starting container $_cnt_name for the first time"
-
-    # (we actually want to split ports and volume args)
-    # shellcheck disable=SC2046 disable=2086
-    docker_exec run -d --name "$_cnt_name" $(Container_ports) $(Container_volumes) "$_cnt_image" $cmd
+    if [ ! "$cmd" ]; then
+      print " * Starting container $_cnt_name for the first time"
+      # (we actually want to split ports and volume args)
+      # shellcheck disable=SC2046 disable=2086
+      docker_exec run -d --name "$_cnt_name" $(Container_ports) $(Container_volumes) "$_cnt_image"
+    else
+      print " * Running command '$cmd' in container $_cnt_name"
+      # (we actually want to split ports and volume args)
+      # shellcheck disable=SC2046 disable=2086
+      docker_exec run --rm -it --name "$_cnt_name" $(Container_ports) $(Container_volumes) "$_cnt_image" $cmd
+    fi
   fi
 }
 
@@ -360,6 +380,61 @@ log() {
 }
 
 
+cmd() {
+  if [ $# -ne 2 ]; then
+    echo -e "\nUsage:\n$0 cmd [world_name] [command] \n"
+    error "World name or command is missing."
+  fi
+
+  local WORLD_NAME="$1"
+  local command="$2"
+
+  Volume "$WORLD_NAME"
+  Volume_create
+
+
+  Image "minecraft-cmd" "latest"
+  Image_pull
+
+  declare -a mc_volumes=("$(Volume_name):/data")
+
+  Container "${WORLD_NAME}_cmd" "$(Image_name)"
+  Container_volumes "${mc_volumes[*]}"
+  Container_run "$command"
+}
+
+generate_map() {
+  if [ $# -ne 1 ]; then
+    echo -e "\nUsage:\n$0 generate_map [world_name] \n"
+    error "World name is missing."
+  fi
+
+  local WORLD_NAME="$1"
+  local command=""
+
+  Volume "$WORLD_NAME"
+  Volume_create
+  local world_volume=$(Volume_name)
+
+  Volume "${WORLD_NAME}_map"
+  Volume_create
+  local map_volume=$(Volume_name)
+
+
+  Image "minecraft-map" "latest"
+  Image_pull
+
+  declare -a mc_volumes=(
+    "$world_volume:/home/minecraft/server"
+    "$map_volume:/home/minecraft/map"
+  )
+
+  Container "${WORLD_NAME}_map" "$(Image_name)"
+  Container_volumes "${mc_volumes[*]}"
+  Container_run "$command"
+}
+
+
 
 
 usage() {
@@ -397,6 +472,13 @@ main() {
       ;;
     "upgrade" )
       upgrade "$WORLD_NAME"
+      ;;
+    "cmd" )
+      shift 2
+      cmd "$WORLD_NAME" "$*"
+      ;;
+    "generate_map" )
+      generate_map "$WORLD_NAME"
       ;;
     "_destroy" )
       destroy "$WORLD_NAME"
