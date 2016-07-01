@@ -70,7 +70,7 @@ docker_exec() {
 
 Volume() {
   _volume_name="${VOLUME_PREFIX}$1"
-  _volume_exists=$( docker_exec volume ls | grep -c "$_volume_name" || true)
+  _volume_exists=$( docker_exec volume ls | grep -c "${_volume_name}\$" || true)
 }
 
 Volume_create() {
@@ -141,8 +141,8 @@ Container() {
   _cnt_ports=()
   _cnt_volumes=()
 
-  _cnt_exists=$( docker_exec ps -a --format "{{.Names}}" | grep -c "$_cnt_name" || true )
-  _cnt_running=$( docker_exec ps --format "{{.Names}}" | grep -c "$_cnt_name" || true )
+  _cnt_exists=$( docker_exec ps -a --format "{{.Names}}" | grep -c "${_cnt_name}\$" || true )
+  _cnt_running=$( docker_exec ps --format "{{.Names}}" | grep -c "${_cnt_name}\$" || true )
 
   if [ $# -gt 1 ]; then
     _cnt_image="$2"
