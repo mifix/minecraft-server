@@ -5,7 +5,7 @@ set -euo pipefail
 
 IMAGE_PREFIX="wthkiste"
 IMAGE_NAME="minecraft-server"
-VOLUME_PREFIX="mc_store_"
+VOLUME_PREFIX="minecraft_store_"
 CNT_PREFIX="minecraft_"
 
 
