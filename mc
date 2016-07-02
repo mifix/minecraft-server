@@ -81,8 +81,12 @@ Volume_name() {
 }
 
 Volume_remove() {
-  print " * Removing volume $_volume_name"
-  docker_exec volume rm "$_volume_name"
+  if [ "$_volume_exists" == 1 ]; then
+    print " * Removing volume $_volume_name"
+    docker_exec volume rm "$_volume_name"
+  else
+    debug "Volume $_volume_name does not exist"
+  fi
 }
 
 Volume_exists() {
@@ -251,13 +255,21 @@ Container_start() {
 }
 
 Container_stop() {
-  print " * Stopping container $_cnt_name"
-  docker_exec stop "$_cnt_name"
+  if [ "$_cnt_running" == 1 ]; then
+    print " * Stopping container $_cnt_name"
+    docker_exec stop "$_cnt_name"
+  else
+    debug "Container $_cnt_name is not running"
+  fi
 }
 
 Container_remove() {
-  print " * Removing container $_cnt_name"
-  docker_exec rm "$_cnt_name"
+  if [ "$_cnt_exists" == 1 ]; then
+    print " * Removing container $_cnt_name"
+    docker_exec rm "$_cnt_name"
+  else
+    debug "Container $_cnt_name does not exists."
+  fi
 }
 
 Container_log() {
@@ -514,7 +526,7 @@ backup() { # {{{
 
   declare -a mc_volumes=("
     $(Volume_name):/home/minecraft/server"
-    "$HOME/.ssh/backup:/home/minecraft/.ssh/id_rsa:ro" 
+    "$HOME/.ssh/backup:/home/minecraft/.ssh/id_rsa:ro"
     "$HOME/.ssh/known_hosts:/home/minecraft/.ssh/known_hosts:ro"
   )
 
