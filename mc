@@ -299,9 +299,11 @@ start() { # {{{
 
   declare -a mc_ports=("${MC_PORT:-25565}:25565")
   declare -a mc_volumes=("$(Volume_name):/home/minecraft/server")
+  declare -a mc_environment=("JVM_OPTS=${MC_JAVA_OPTS}")
 
 
   Container "$WORLD_NAME" "$(Image_name)" "${mc_ports[*]}" "${mc_volumes[*]}"
+  Container_environment "${mc_environment[*]}"
   Container_run
 } # }}}
 
